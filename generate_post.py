@@ -9,8 +9,8 @@ from datetime import datetime
 # ── credentials ──────────────────────────────────────────────
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 WP_URL            = os.environ["WP_URL"].rstrip("/")
-WP_USERNAME       = os.environ["WP_USERNAME"]
-WP_APP_PASSWORD   = os.environ["WP_APP_PASSWORD"]
+WP_USERNAME       = os.environ.get("WP_USERNAME", "")
+WP_APP_PASSWORD   = os.environ.get("WP_APP_PASSWORD", "")
 
 # NOTE: WP_USERNAME and WP_APP_PASSWORD are placeholders.
 # EqualiShop is a custom PHP site. When the blog endpoint is built,
