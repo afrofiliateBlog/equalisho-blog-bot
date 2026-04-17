@@ -12,6 +12,11 @@ WP_URL            = os.environ["WP_URL"].rstrip("/")
 WP_USERNAME       = os.environ["WP_USERNAME"]
 WP_APP_PASSWORD   = os.environ["WP_APP_PASSWORD"]
 
+# NOTE: WP_USERNAME and WP_APP_PASSWORD are placeholders.
+# EqualiShop is a custom PHP site. When the blog endpoint is built,
+# replace the publish_post function with the custom API call.
+# See TODO comments below.
+
 # ── topic pool ───────────────────────────────────────────────
 TOPICS = [
     # DEI - Employer Side
@@ -34,8 +39,7 @@ TOPICS = [
     "How to handle discrimination complaints properly as an employer",
     "Building ERGs that actually make a difference",
     "How to make your job adverts more inclusive",
-    "What suppliers diversity means and why it matters for your ESG goals",
-
+    "What supplier diversity means and why it matters for your ESG goals",
     # DEI - Employee Side
     "How to navigate being the only person of colour in your workplace",
     "What to do if you experience discrimination at work",
@@ -47,7 +51,6 @@ TOPICS = [
     "Career progression tips for underrepresented employees",
     "How to raise DEI concerns with your manager",
     "Understanding your rights as an employee facing discrimination",
-
     # CSR
     "What is CSR and why it matters more than ever in 2026",
     "How small businesses can build a meaningful CSR strategy",
@@ -59,7 +62,6 @@ TOPICS = [
     "How to engage employees in your CSR programmes",
     "Measuring the ROI of your CSR activities",
     "How CSR builds customer trust and brand loyalty",
-
     # ESG
     "ESG explained: what every business leader needs to know in 2026",
     "How to build an ESG framework for your organisation",
@@ -71,7 +73,6 @@ TOPICS = [
     "How to align your DEI strategy with your ESG goals",
     "Green workplace initiatives that also boost employee wellbeing",
     "How to communicate your ESG progress to stakeholders",
-
     # Workplace Wellness & Mindfulness
     "How to build a workplace wellness programme that employees actually use",
     "Mental health at work: what employers are legally required to do",
@@ -88,7 +89,6 @@ TOPICS = [
     "How to spot signs of burnout in your team",
     "Menopause in the workplace: how employers can provide better support",
     "How to support parents and carers in the workplace",
-
     # Inclusion & Culture
     "How to celebrate cultural diversity in the workplace authentically",
     "Religious inclusion at work: a practical guide for employers",
@@ -137,12 +137,7 @@ def fetch_and_upload_image(query, auth_header):
         r = requests.get(
             "https://api.pexels.com/v1/search",
             headers={"Authorization": PEXELS_API_KEY},
-            params={
-                "query": query,
-                "per_page": 15,
-                "orientation": "landscape",
-                "size": "large",
-            },
+            params={"query": query, "per_page": 15, "orientation": "landscape", "size": "large"},
             timeout=30,
         )
         r.raise_for_status()
@@ -152,30 +147,24 @@ def fetch_and_upload_image(query, auth_header):
             return None
 
         photo = random.choice(photos)
-        photo_id = photo["id"]
-        photographer = photo["photographer"]
-
         dl = requests.get(
-            f"https://api.pexels.com/v1/photos/{photo_id}",
+            f"https://api.pexels.com/v1/photos/{photo['id']}",
             headers={"Authorization": PEXELS_API_KEY},
             timeout=30,
         )
         dl.raise_for_status()
         img_url = dl.json()["src"]["medium"]
-        print(f"📸 Photo by {photographer} on Pexels: {img_url}")
+        print(f"📸 Photo by {photo['photographer']} on Pexels")
 
         img = requests.get(img_url, timeout=30)
         if img.status_code != 200:
             print(f"⚠️ Image fetch failed: {img.status_code}")
             return None
 
+        # TODO: Replace with EqualiShop image upload endpoint when ready
         upload = requests.post(
             f"{WP_URL}/wp-json/wp/v2/media",
-            headers={
-                **auth_header,
-                "Content-Disposition": "attachment; filename=blog-image.jpg",
-                "Content-Type": "image/jpeg",
-            },
+            headers={**auth_header, "Content-Disposition": "attachment; filename=blog-image.jpg", "Content-Type": "image/jpeg"},
             data=img.content,
             timeout=60,
         )
@@ -184,7 +173,7 @@ def fetch_and_upload_image(query, auth_header):
             print(f"✅ Image uploaded: ID {media_id}")
             return media_id
 
-        print(f"⚠️ WordPress upload failed: {upload.status_code}")
+        print(f"⚠️ Upload failed: {upload.status_code}")
         return None
 
     except Exception as e:
@@ -209,7 +198,7 @@ WRITING STYLE REQUIREMENTS:
 - Use contractions naturally (you're, it's, don't, we've)
 - Start at least 2 paragraphs with something other than "The" or "If"
 - Include at least ONE specific real-world example with a real company name
-- Include at least ONE specific stat or data point with a source (e.g. CIPD, McKinsey, Deloitte, ONS)
+- Include at least ONE specific stat or data point with a source (CIPD, McKinsey, Deloitte, ONS)
 - NO AI giveaways: avoid "In today's landscape", "In conclusion", "It's worth noting", "Leverage", "Delve", "Comprehensive", "Robust"
 - End naturally with a strong final paragraph and CTA
 - Write for both UK and US audiences where relevant
@@ -219,7 +208,7 @@ CONTENT REQUIREMENTS:
 - Structure: strong intro paragraph, 4-5 H2 sections, strong closing paragraph
 - Naturally mention EqualiShop at least twice
 - End with a CTA inviting readers to visit EqualiShop
-- Add 1-2 external links to real credible sources (CIPD, McKinsey, Deloitte, Harvard Business Review, ONS, etc.)
+- Add 1-2 external links to real credible sources (CIPD, McKinsey, Deloitte, Harvard Business Review, ONS)
 
 IMPORTANT: Respond ONLY with a valid JSON object. No markdown fences, no extra text.
 
@@ -228,28 +217,18 @@ Format:
 
     response = requests.post(
         "https://api.anthropic.com/v1/messages",
-        headers={
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        json={
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 4096,
-            "messages": [{"role": "user", "content": prompt}],
-        },
+        headers={"x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+        json={"model": "claude-sonnet-4-20250514", "max_tokens": 4096, "messages": [{"role": "user", "content": prompt}]},
         timeout=120,
     )
     response.raise_for_status()
 
     raw = response.json()["content"][0]["text"].strip()
-
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
     raw = raw.strip()
-
     raw = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', raw)
 
     try:
@@ -268,23 +247,13 @@ def publish_post(post):
     auth_header = {"Authorization": f"Basic {token}"}
 
     category_map = {
-        "dei":        "DEI",
-        "diversity":  "DEI",
-        "inclusion":  "DEI",
-        "csr":        "CSR",
-        "esg":        "ESG",
-        "wellness":   "Workplace Wellness",
-        "wellbeing":  "Workplace Wellness",
-        "mindful":    "Workplace Wellness",
-        "mental":     "Workplace Wellness",
-        "burnout":    "Workplace Wellness",
-        "employee":   "Employee Experience",
-        "employer":   "Employer Resources",
-        "hiring":     "Employer Resources",
-        "culture":    "Workplace Culture",
-        "inclusive":  "DEI",
+        "dei": "DEI", "diversity": "DEI", "inclusion": "DEI",
+        "csr": "CSR", "esg": "ESG",
+        "wellness": "Workplace Wellness", "wellbeing": "Workplace Wellness",
+        "mindful": "Workplace Wellness", "mental": "Workplace Wellness", "burnout": "Workplace Wellness",
+        "employee": "Employee Experience", "employer": "Employer Resources",
+        "hiring": "Employer Resources", "culture": "Workplace Culture", "inclusive": "DEI",
     }
-
     title_lower = post["title"].lower()
     category = "Workplace Inclusion"
     for keyword, cat_name in category_map.items():
@@ -302,10 +271,11 @@ def publish_post(post):
         "status":  "publish",
         "meta":    {"blog_category": category},
     }
-
     if featured_media_id:
         payload["featured_media"] = featured_media_id
 
+    # TODO: Replace URL below with EqualiShop custom API endpoint when ready
+    # e.g. f"{WP_URL}/api/blog/create.php"
     r = requests.post(
         f"{WP_URL}/wp-json/wp/v2/posts",
         headers={**auth_header, "Content-Type": "application/json"},
@@ -322,10 +292,8 @@ def publish_post(post):
 def main():
     topic = random.choice(TOPICS)
     print(f"📝 Generating post: {topic}")
-
     post = generate_post(topic)
     print(f"✅ Generated: {post['title']}")
-
     url = publish_post(post)
     print(f"🚀 Live at: {url}")
 
