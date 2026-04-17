@@ -12,6 +12,10 @@ WP_URL            = os.environ["WP_URL"].rstrip("/")
 WP_USERNAME       = os.environ["WP_USERNAME"]
 WP_APP_PASSWORD   = os.environ["WP_APP_PASSWORD"]
 
+# NOTE: WP_USERNAME and WP_APP_PASSWORD are placeholders.
+# EqualiShop is a custom PHP site. When the blog endpoint is built,
+# replace the publish_post function with the custom API call.
+
 # ── 5 pillar topic clusters ───────────────────────────────────
 PILLARS = {
     "Workplace DEI Strategy": [
@@ -111,12 +115,7 @@ def fetch_and_upload_image(query, auth_header):
         r = requests.get(
             "https://api.pexels.com/v1/search",
             headers={"Authorization": PEXELS_API_KEY},
-            params={
-                "query": query,
-                "per_page": 15,
-                "orientation": "landscape",
-                "size": "large",
-            },
+            params={"query": query, "per_page": 15, "orientation": "landscape", "size": "large"},
             timeout=30,
         )
         r.raise_for_status()
@@ -126,30 +125,24 @@ def fetch_and_upload_image(query, auth_header):
             return None
 
         photo = random.choice(photos)
-        photo_id = photo["id"]
-        photographer = photo["photographer"]
-
         dl = requests.get(
-            f"https://api.pexels.com/v1/photos/{photo_id}",
+            f"https://api.pexels.com/v1/photos/{photo['id']}",
             headers={"Authorization": PEXELS_API_KEY},
             timeout=30,
         )
         dl.raise_for_status()
         img_url = dl.json()["src"]["medium"]
-        print(f"📸 Photo by {photographer} on Pexels: {img_url}")
+        print(f"📸 Photo by {photo['photographer']} on Pexels")
 
         img = requests.get(img_url, timeout=30)
         if img.status_code != 200:
             print(f"⚠️ Image fetch failed: {img.status_code}")
             return None
 
+        # TODO: Replace with EqualiShop image upload endpoint when ready
         upload = requests.post(
             f"{WP_URL}/wp-json/wp/v2/media",
-            headers={
-                **auth_header,
-                "Content-Disposition": "attachment; filename=blog-image.jpg",
-                "Content-Type": "image/jpeg",
-            },
+            headers={**auth_header, "Content-Disposition": "attachment; filename=blog-image.jpg", "Content-Type": "image/jpeg"},
             data=img.content,
             timeout=60,
         )
@@ -158,7 +151,7 @@ def fetch_and_upload_image(query, auth_header):
             print(f"✅ Image uploaded: ID {media_id}")
             return media_id
 
-        print(f"⚠️ WordPress upload failed: {upload.status_code}")
+        print(f"⚠️ Upload failed: {upload.status_code}")
         return None
 
     except Exception as e:
@@ -204,28 +197,18 @@ Format:
 
     response = requests.post(
         "https://api.anthropic.com/v1/messages",
-        headers={
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        json={
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 4096,
-            "messages": [{"role": "user", "content": prompt}],
-        },
+        headers={"x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+        json={"model": "claude-sonnet-4-20250514", "max_tokens": 4096, "messages": [{"role": "user", "content": prompt}]},
         timeout=120,
     )
     response.raise_for_status()
 
     raw = response.json()["content"][0]["text"].strip()
-
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
     raw = raw.strip()
-
     raw = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', raw)
 
     try:
@@ -244,11 +227,11 @@ def publish_post(post, pillar):
     auth_header = {"Authorization": f"Basic {token}"}
 
     pillar_category_map = {
-        "Workplace DEI Strategy":          "DEI",
+        "Workplace DEI Strategy":              "DEI",
         "Employee Wellbeing and Mental Health": "Workplace Wellness",
-        "ESG and Corporate Responsibility": "ESG",
-        "Inclusive Hiring and Retention":  "Hiring & Retention",
-        "Workplace Culture and Belonging":  "Workplace Culture",
+        "ESG and Corporate Responsibility":    "ESG",
+        "Inclusive Hiring and Retention":      "Hiring & Retention",
+        "Workplace Culture and Belonging":     "Workplace Culture",
     }
     category = pillar_category_map.get(pillar, "Workplace Inclusion")
 
@@ -262,10 +245,11 @@ def publish_post(post, pillar):
         "status":  "publish",
         "meta":    {"blog_category": category},
     }
-
     if featured_media_id:
         payload["featured_media"] = featured_media_id
 
+    # TODO: Replace URL below with EqualiShop custom API endpoint when ready
+    # e.g. f"{WP_URL}/api/blog/create.php"
     r = requests.post(
         f"{WP_URL}/wp-json/wp/v2/posts",
         headers={**auth_header, "Content-Type": "application/json"},
@@ -284,10 +268,8 @@ def main():
     topic = random.choice(PILLARS[pillar])
     print(f"📌 Pillar: {pillar}")
     print(f"📝 Generating post: {topic}")
-
     post = generate_post(topic, pillar)
     print(f"✅ Generated: {post['title']}")
-
     url = publish_post(post, pillar)
     print(f"🚀 Live at: {url}")
 
